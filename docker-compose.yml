@@ -1,0 +1,42 @@
+version: "3.9"
+services:
+  biocypher:
+    build: .
+    container_name: biocypher
+    environment:
+      BIOCYPHER_NEO4J_URI: bolt://neo4j:7687
+      BIOCYPHER_NEO4J_USER: neo4j
+      BIOCYPHER_NEO4J_PASSWORD: myNewPass456
+    volumes:
+      - ./config:/app/config
+      - ./data_source_schemas:/app/data_source_schemas
+      - ./scripts:/app/scripts
+      - ./aux_files:/app/aux_files
+      - ./output:/app/output
+      - ./output_human:/app/output_human
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+  neo4j:
+    build: ./deploy
+    container_name: neo4j
+    environment:
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      NEO4J_AUTH: neo4j/myNewPass456
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+      NEO4J_dbms_security_procedures_allowlist: "apoc.*"
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - biocypher_data:/data
+      - ./plugins:/plugins
+      - ./output_human:/import
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p myNewPass456 'RETURN 1;'"]
+      interval: 5s
+      retries: 20
+
+volumes:
+  biocypher_data:
